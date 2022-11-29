@@ -1,0 +1,250 @@
+package com.ingrammicro.testyourandroid;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
+import android.os.Bundle;
+import android.os.Handler;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.io.IOException;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class microcheck extends AppCompatActivity {
+private static final int REQUEST_AUDIO_PERMISSION_CODE=101;
+MediaRecorder mediaRecorder;
+MediaPlayer mediaPlayer;
+boolean isRecording=false;
+boolean isPlaying=false;
+int seconds=0;
+ImageButton mRecord;
+ImageButton mPlay;
+TextView mTime;
+int presume =0; //dummyseconds
+int Playableseconds=0;
+Handler handler;
+
+ExecutorService executorService= Executors.newSingleThreadExecutor();
+
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_microcheck);
+        mRecord=findViewById(R.id.record);
+        mPlay=findViewById(R.id.play);
+        mTime=findViewById(R.id.tv_time);
+        mediaPlayer=new MediaPlayer();
+        getSupportActionBar().hide();
+
+
+        mRecord.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View view) {
+                if(checkRecordingPermission())
+                {
+               if (!isRecording)
+               {
+                   isRecording=true;
+                   executorService.execute(new Runnable() {
+                       @Override
+                       public void run() {
+                           mediaRecorder=new MediaRecorder();
+                           mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                           mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                           mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+
+
+                           try {
+                               mediaRecorder.prepare();
+                           } catch (IOException e) {
+                               e.printStackTrace();
+                           }
+                           mediaRecorder.start();
+                           runOnUiThread(new Runnable() {
+                               @Override
+                               public void run() {
+                                   Playableseconds=0;
+                                   seconds=0;
+                                   presume=0;
+                                   //mRecord.setImageDrawable(ContextCompat.getDrawable((microcheck.this,R.drawable.)));
+                                   runTimer();
+
+                               }
+                           });
+
+
+
+                       }
+                       else
+                       {
+                           executorService.execute(new Runnable() {
+                               @Override
+                               public void run() {
+                                   mediaRecorder.stop();
+                                   mediaRecorder.release();
+                                   mediaRecorder=null;
+                                   Playableseconds=seconds;
+                                   presume=seconds;
+                                   seconds=0;
+                                   isRecording=false;
+
+
+                                   runOnUiThread(new Runnable() {
+                                       @Override
+                                       public void run() {
+                                           handler.removeCallbacksAndMessages(null);
+
+                                           //mRecord.setImageDrawable(ContextCompat.getDrawable((microcheck.this,R.drawable.recordingplay)));
+
+                                       }
+                                   });
+                               }
+                           });
+
+                       }
+                   });
+                   
+               }
+
+
+                }
+               else
+                {
+                    requestRecordingPermission();
+                }
+
+            }
+
+                                       private boolean checkRecordingPermission() {
+                                           if(ContextCompat.checkSelfPermission(this,Manifest.permission.RECORD_AUDIO)== PackageManager.PERMISSION_DENIED)
+                                           {
+                                               requestRecordingPermission();
+                                               return false;
+
+                                           }
+                                           return true;
+                                       }
+
+
+
+
+                                       private void requestRecordingPermission() {
+                                           ActivityCompat.requestPermissions(microcheck.this,new String []{Manifest.permission.RECORD_AUDIO},REQUEST_AUDIO_PERMISSION_CODE);
+
+                                       }
+
+                                   }
+     mPlay.setOnClickListener(new View.OnClickListener() {
+         @Override
+         public void onClick(View view) {
+             try {
+                 mediaPlayer.prepare();
+             } catch (IOException e) {
+                 e.printStackTrace();
+             }
+             mediaPlayer.start();
+             isPlaying=true;
+             //mPlay.setImageDrawable(ContextCompat.getDrawable(microcheck.this,R.drawable.recording_pause));
+             runTimer();
+
+         }
+         else
+         {
+             mediaPlayer.stop();
+             mediaPlayer.release();
+             mediaPlayer=null;
+             mediaPlayer=new MediaPlayer();
+             isPlaying=false;
+             seconds=0;
+             handler.removeCallbacksAndMessages(null);
+             //mPlay.setImageDrawable(ContextCompat.getDrawable(microcheck.this,R.drawable.recording_play));
+
+
+         }
+
+
+
+
+     });
+
+    }
+    private void runTimer()
+    {
+        handler=new Handler();
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                int minutes=(seconds%3600)/60 ;
+                int secs=seconds%60;
+                String time=String.format(Locale.getDefault(),"%02d:%02d",minutes,secs);
+                mTime.setText(time);
+
+
+                if(isRecording  || ( isPlaying && Playableseconds!=-1))
+                {
+                    seconds++;
+                    Playableseconds--;
+                    if( isPlaying && Playableseconds!=-1)
+                    {
+
+                        mediaPlayer.stop();
+                        mediaPlayer.release();
+                        mediaPlayer=null;
+                        mediaPlayer=new MediaPlayer();
+                        Playableseconds=presume;
+                        seconds=0;
+                        handler.removeCallbacksAndMessages(null);
+                        //mPlay.setImageDrawable(ContextCompat.getDrawable(microcheck.this,R.drawable.recordingplay));
+                       return;
+
+
+                    }
+
+
+
+
+            }
+                handler.postDelayed(this,1000);
+
+        })
+    }
+
+
+
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode==REQUEST_AUDIO_PERMISSION_CODE)
+        {
+            if(grantResults.length>0)
+            {
+                boolean permissionToRecord=grantResults[0]==PackageManager.PERMISSION_GRANTED;
+                if (permissionToRecord)
+                {
+                    Toast.makeText(getApplicationContext(),"Permission OK!",Toast.LENGTH_SHORT).show();
+                }
+                else
+                {
+                    Toast.makeText(getApplicationContext(),"Permission non obtenue",Toast.LENGTH_SHORT).show();
+
+                }
+            }
+        }
+
+    }

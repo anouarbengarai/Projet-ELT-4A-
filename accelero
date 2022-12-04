@@ -1,0 +1,49 @@
+package com.ingrammicro.testyourandroid;
+
+import android.app.Activity;
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.widget.Toast;
+
+public class SensorActivity extends Activity implements SensorEventListener {
+    private final SensorManager mSensorManager;
+    private final Sensor mAccelerometer;
+    private Context Context;
+
+    public SensorActivity(Context context) {
+        Context = context;
+
+        mSensorManager = (SensorManager) Context.getSystemService(Context.SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mSensorManager.registerListener((SensorEventListener) Context, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener((SensorEventListener) Context);
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        Toast.makeText(Context, "accelerometer values changed!!!", Toast.LENGTH_SHORT).show();
+
+        try {
+            Thread.sleep(3000L);
+        } catch (InterruptedException e) {
+        }
+           }
+}
